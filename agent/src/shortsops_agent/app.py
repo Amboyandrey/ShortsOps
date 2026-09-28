@@ -9,7 +9,7 @@ import logging
 import shutil
 import subprocess
 import time
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from importlib.metadata import version
 
 from supabase import AsyncClient, acreate_client
@@ -24,6 +24,7 @@ from .runner import pipeline_lock, pipeline_locked, run_cli
 log = logging.getLogger("shortsops_agent")
 HEARTBEAT_S = 60
 POLL_S = 60  # fallback when the realtime socket is down
+OFFLINE_AFTER = timedelta(minutes=3)  # same threshold the app uses to show "offline"
 RESCAN_S = 300  # full resync in case a file event was missed
 DEBOUNCE_S = 2
 DISK_SCAN_S = 600  # sizing data/out walks ~18 GB, so do it rarely
@@ -95,6 +96,18 @@ class Agent:
             .execute()
         )
         await self._announce_live(history)
+
+    async def _announce_online(self) -> None:
+        """Only a return from real downtime is news; a quick service restart is not."""
+        res = await self.db.table("agent_status").select("last_seen").execute()
+        if res.data:
+            gap = datetime.now(UTC) - datetime.fromisoformat(res.data[0]["last_seen"])
+            if gap < OFFLINE_AFTER:
+                return
+            body = f"Back after {int(gap.total_seconds() // 60)} min offline"
+        else:
+            body = None
+        await self.mirror.event("agent_online", "Laptop agent online", body, {})
 
     async def _announce_live(self, history: list[dict]) -> None:
         now = datetime.now(UTC)
@@ -238,7 +251,7 @@ class Agent:
         await self.mirror.everything()
         if pipeline_locked(self.s.data):
             log.info("a pipeline run is in progress; long commands will wait for it")
-        await self.mirror.event("agent_online", "Laptop agent online", None, {})
+        await self._announce_online()
 
         channel = self.db.channel("agent-commands")
         channel.on_postgres_changes(
