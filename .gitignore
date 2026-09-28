@@ -1,0 +1,20 @@
+# Secrets and local env
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+
+# Supabase local
+supabase/.branches/
+supabase/.temp/
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
