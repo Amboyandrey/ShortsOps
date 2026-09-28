@@ -11,9 +11,8 @@ EnvironmentFile=%h/Documents/GitHub/ShortsOps/agent/.env
 ExecStart=%h/Documents/GitHub/ShortsOps/agent/.venv/bin/shortsops-agent
 Restart=always
 RestartSec=15
-# Least privilege: the agent only needs to read/write the pipeline and its own folder.
-NoNewPrivileges=yes
-PrivateTmp=yes
+# No sandboxing options: in a user service they need a user namespace, which disables the setgid
+# crontab binary the heartbeat uses to confirm the cron job is installed.
 
 [Install]
 WantedBy=default.target
