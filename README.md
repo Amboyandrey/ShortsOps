@@ -78,8 +78,21 @@ The app takes the project URL and publishable key at build time; both are public
 cd app
 cp env.example.json env.json                           # fill in URL and publishable key
 flutter run --dart-define-from-file=env.json           # device, emulator or -d web-server
-flutter build apk --release --dart-define-from-file=env.json   # needs the Android SDK
+flutter build apk --release --split-per-abi --target-platform android-arm64 \
+  --dart-define-from-file=env.json                     # -> build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
 ```
+
+Release builds are signed by the keystore that `android/key.properties` (gitignored) points to;
+without that file they fall back to the debug key and are not for distribution. Create one with:
+
+```bash
+keytool -genkeypair -keystore ~/.android-keys/shortsops-upload.jks -storetype PKCS12 \
+  -alias upload -keyalg RSA -keysize 4096 -validity 10000
+# android/key.properties: storeFile=<path>, storePassword=..., keyAlias=upload, keyPassword=...
+```
+
+Back up the keystore and its password together: Android only installs an update over an existing
+install when both are signed with the same key.
 
 Sign in with the owner account. Tabs: **Status** (laptop online/offline, daily run, quota, disk,
 pause switch, schedule, recent events), **Queue** (reorder, build now, skip/restore, return stuck
