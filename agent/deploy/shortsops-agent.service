@@ -1,0 +1,19 @@
+# User service: install with `systemctl --user enable --now shortsops-agent` (see README).
+[Unit]
+Description=ShortsOps agent for the facts-shorts pipeline
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/Documents/GitHub/ShortsOps/agent
+EnvironmentFile=%h/Documents/GitHub/ShortsOps/agent/.env
+ExecStart=%h/Documents/GitHub/ShortsOps/agent/.venv/bin/shortsops-agent
+Restart=always
+RestartSec=15
+# Least privilege: the agent only needs to read/write the pipeline and its own folder.
+NoNewPrivileges=yes
+PrivateTmp=yes
+
+[Install]
+WantedBy=default.target
