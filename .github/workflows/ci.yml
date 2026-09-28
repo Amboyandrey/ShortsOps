@@ -19,6 +19,22 @@ jobs:
       - run: uv run ruff format --check .
       - run: uv run pytest -q
 
+  app:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: dart format --output=none --set-exit-if-changed lib test
+      - run: flutter analyze
+      - run: flutter test
+
   database:
     runs-on: ubuntu-latest
     steps:

@@ -18,7 +18,7 @@ agent mirrors those files into Supabase and turns app commands into fixed facts-
 | `supabase/migrations/` | Schema, row-level security, `claim_command()`, Realtime, private `previews` bucket |
 | `supabase/tests/` | pgTAP tests proving what the owner, the agent and everyone else can do |
 | `agent/` | Python agent: mirror, command runner, heartbeat; systemd unit in `agent/deploy/` |
-| `app/` | Flutter app |
+| `app/` | Flutter app (Riverpod, go_router, supabase_flutter); Android and web |
 
 ## Security model
 
@@ -68,6 +68,23 @@ systemctl --user enable --now shortsops-agent
 loginctl enable-linger "$USER"            # keep it running without an open session
 journalctl --user -u shortsops-agent -f   # watch it sync
 ```
+
+### 4. App
+
+The app takes the project URL and publishable key at build time; both are public by design
+(access is decided by RLS and the signed-in user's role), but `env.json` stays out of git anyway.
+
+```bash
+cd app
+cp env.example.json env.json                           # fill in URL and publishable key
+flutter run --dart-define-from-file=env.json           # device, emulator or -d web-server
+flutter build apk --release --dart-define-from-file=env.json   # needs the Android SDK
+```
+
+Sign in with the owner account. Tabs: **Status** (laptop online/offline, daily run, quota, disk,
+pause switch, schedule, recent events), **Queue** (reorder, build now, skip/restore, return stuck
+topics, add your own, research more), **Videos** (scheduled and live with views; live videos still
+private are flagged), **Activity** (live run steps and every command's outcome).
 
 ## Commands the app can send
 
