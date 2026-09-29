@@ -40,12 +40,18 @@ class QueuePage extends ConsumerWidget {
           final pending = topics.where((t) => t.status == 'pending').toList();
           final stuck = topics.where((t) => t.isStuck).toList();
           final skipped = topics.where((t) => t.status == 'skipped').toList();
+          // Topics added from the app that the laptop has not picked up yet, newest first.
+          final waiting = (ref.watch(commandsProvider).value ?? const <Command>[])
+              .where((c) => c.type == 'add_topic' && c.isOpen)
+              .toList();
           return ListView(
             padding: const EdgeInsets.only(bottom: 96),
             children: [
               if (stuck.isNotEmpty) ...[const _Header('Needs attention'), for (final t in stuck) _TopicTile(topic: t)],
               _Header('Up next (${pending.length})'),
-              if (pending.isEmpty) const ListTile(title: Text('Queue is empty; the next run researches more.')),
+              for (final c in waiting) _WaitingTile(command: c),
+              if (pending.isEmpty && waiting.isEmpty)
+                const ListTile(title: Text('Queue is empty; the next run researches more.')),
               for (final (i, t) in pending.indexed) _TopicTile(topic: t, rank: i + 1),
               if (skipped.isNotEmpty) ...[
                 _Header('Skipped (${skipped.length})'),
@@ -85,6 +91,31 @@ class QueuePage extends ConsumerWidget {
       return;
     }
     await sendCommand(context, ref, 'add_topic', 'New topic', {'text': text});
+  }
+}
+
+/// A topic added from the app that is still in Supabase, waiting for the laptop agent to add it to the queue.
+class _WaitingTile extends ConsumerWidget {
+  const _WaitingTile({required this.command});
+
+  final Command command;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final now = ref.watch(clockProvider).value ?? DateTime.now();
+    final adding = command.status == 'claimed';
+    return ListTile(
+      leading: Icon(adding ? Icons.sync : Icons.hourglass_top, size: 20),
+      title: Text(command.payload['text'] as String? ?? ''),
+      subtitle: Text(adding ? 'Adding to the queue…' : 'Waiting for the laptop · added ${ago(command.createdAt, now)}'),
+      trailing: adding
+          ? null
+          : IconButton(
+              tooltip: 'Cancel',
+              icon: const Icon(Icons.close),
+              onPressed: () => ref.read(repositoryProvider).cancel(command.id),
+            ),
+    );
   }
 }
 
