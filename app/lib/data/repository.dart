@@ -46,13 +46,18 @@ class ShortsOpsRepository {
       .limit(50)
       .map((rows) => rows.map(AppEvent.fromRow).toList());
 
-  /// Queues a command for the laptop agent; it expires unless picked up within [ttl].
-  Future<void> send(String type, [Map<String, dynamic> payload = const {}, Duration ttl = const Duration(hours: 1)]) =>
-      _db.from('commands').insert({
-        'type': type,
-        'payload': payload,
-        'expires_at': DateTime.now().toUtc().add(ttl).toIso8601String(),
-      });
+  /// Queue edits are harmless to apply late, so they wait out a laptop that is off for days (the database caps
+  /// them at 7); anything that builds or publishes expires after an hour so it never fires by surprise.
+  static const queueEdits = {'add_topic', 'skip_topic', 'restore_topic', 'reorder_topics'};
+
+  static Duration ttlFor(String type) => queueEdits.contains(type) ? const Duration(days: 6) : const Duration(hours: 1);
+
+  /// Queues a command for the laptop agent; it expires unless picked up within [ttlFor] its type.
+  Future<void> send(String type, [Map<String, dynamic> payload = const {}]) => _db.from('commands').insert({
+    'type': type,
+    'payload': payload,
+    'expires_at': DateTime.now().toUtc().add(ttlFor(type)).toIso8601String(),
+  });
 
   Future<void> cancel(String commandId) =>
       _db.from('commands').update({'status': 'cancelled'}).eq('id', commandId).eq('status', 'pending');
