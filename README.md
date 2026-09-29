@@ -94,10 +94,18 @@ keytool -genkeypair -keystore ~/.android-keys/shortsops-upload.jks -storetype PK
 Back up the keystore and its password together: Android only installs an update over an existing
 install when both are signed with the same key.
 
+**Live YouTube data (Android).** The Videos tab can read the channel straight from the YouTube Data
+API (read-only, about 9 quota units per refresh), so views are current even when the laptop is off.
+In the Google Cloud project that owns the channel's YouTube API access, create two OAuth clients:
+an *Android* client (package `dev.amboyandrey.shortsops`, SHA-1 of the release keystore:
+`keytool -list -v -keystore <jks> -alias upload`) and a *Web* client whose ID goes in `env.json` as
+`GOOGLE_SERVER_CLIENT_ID`. Add the `youtube.readonly` scope to the consent screen. Without the
+connection, the tab shows the laptop's mirror as before.
+
 Sign in with the owner account. Tabs: **Status** (laptop online/offline, daily run, quota, disk,
 pause switch, schedule, recent events), **Queue** (reorder, build now, skip/restore, return stuck
-topics, add your own, research more), **Videos** (scheduled and live with views; live videos still
-private are flagged), **Activity** (live run steps and every command's outcome).
+topics, add your own, research more), **Videos** (scheduled and live, pull to refresh from YouTube;
+live videos still private are flagged), **Activity** (live run steps and every command's outcome).
 
 ## Commands the app can send
 
