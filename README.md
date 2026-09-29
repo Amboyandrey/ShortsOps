@@ -1,12 +1,22 @@
 # ShortsOps
 
-Mobile control room for the facts-shorts pipeline: a Flutter app, a Supabase backend, and a
-small agent on the machine that runs the pipeline.
+Mobile control room for facts-shorts, a private pipeline on my laptop that researches, writes,
+voices, renders and schedules a YouTube Shorts channel every day. ShortsOps is a Flutter app,
+a Supabase backend, and a small agent on the laptop, so the pipeline can be watched and steered
+from a phone.
+
+<p align="center">
+  <img src="docs/screenshots/status.jpg" width="250" alt="Status tab: laptop online, daily run done, cron installed, quota, disk use, pause switch, scheduled Shorts">
+  <img src="docs/screenshots/queue.jpg" width="250" alt="Queue tab: the next topics in build order">
+  <img src="docs/screenshots/videos.jpg" width="250" alt="Videos tab: live from YouTube, total views and scheduled Shorts">
+</p>
 
 ```
  Flutter app ──(Auth + RLS)──►  Supabase  ◄──(outbound only)── agent (laptop)
    read state, send commands     Postgres mirror + command queue   files → tables, commands → facts-shorts CLI
    live updates (Realtime)       Realtime · Storage                heartbeat every 60 s
+      │
+      └──(Google sign-in, youtube.readonly)──► YouTube Data API: live views, even with the laptop off
 ```
 
 The laptop never accepts inbound connections. The pipeline keeps its own JSON files as the
