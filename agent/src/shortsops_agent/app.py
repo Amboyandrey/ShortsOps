@@ -13,7 +13,15 @@ from datetime import UTC, datetime, timedelta
 from importlib.metadata import version
 
 from supabase import AsyncClient, acreate_client
-from watchdog.events import FileSystemEvent, FileSystemEventHandler
+from watchdog.events import (
+    FileClosedEvent,
+    FileCreatedEvent,
+    FileDeletedEvent,
+    FileModifiedEvent,
+    FileMovedEvent,
+    FileSystemEvent,
+    FileSystemEventHandler,
+)
 from watchdog.observers import Observer
 
 from . import mapping, settings
@@ -43,7 +51,13 @@ class _Changes(FileSystemEventHandler):
     def __init__(self, loop: asyncio.AbstractEventLoop, dirty: set[str], wake: asyncio.Event):
         self.loop, self.dirty, self.wake = loop, dirty, wake
 
+    # Only writes count: the agent's own heartbeat opens history.json every minute, and read-only
+    # open/close events would otherwise keep waking the sync loop for nothing.
+    WRITES = (FileModifiedEvent, FileCreatedEvent, FileMovedEvent, FileDeletedEvent, FileClosedEvent)
+
     def on_any_event(self, event: FileSystemEvent) -> None:
+        if not isinstance(event, self.WRITES):
+            return
         path = str(getattr(event, "dest_path", "") or event.src_path)
         step = WATCHED.get(path.rsplit("/", 1)[-1])
         if step:
@@ -208,14 +222,22 @@ class Agent:
             "config": self.mirror.config,
             "builds": self.mirror.builds,
         }
+        last_rescan = time.monotonic()
         while True:
+            wait = max(0.0, RESCAN_S - (time.monotonic() - last_rescan))
             try:
-                await asyncio.wait_for(self.files_changed.wait(), RESCAN_S)
+                await asyncio.wait_for(self.files_changed.wait(), wait)
                 await asyncio.sleep(DEBOUNCE_S)  # let a burst of writes settle
             except TimeoutError:
+                pass
+            # The full resync runs on schedule however busy the files are, as a net for missed events.
+            if time.monotonic() - last_rescan >= RESCAN_S:
                 self.dirty.update(steps)
+                last_rescan = time.monotonic()
             self.files_changed.clear()
-            todo, self.dirty = self.dirty, set()
+            # Emptied in place: the file watcher holds a reference to this exact set.
+            todo = set(self.dirty)
+            self.dirty.clear()
             for name in todo:
                 try:
                     await steps[name]()
