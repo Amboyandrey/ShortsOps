@@ -43,7 +43,8 @@ class Mirror:
         self.db = client
         self.s = settings
         self.known: dict[str, dict[str, str]] = {}  # table -> key -> row digest
-        self.build_sizes: dict[str, tuple[float, int]] = {}  # build id -> (meta mtime, bytes)
+        # build id -> ((meta mtime, folder mtime), bytes); cleanup deletes files, which changes the folder's mtime
+        self.build_sizes: dict[str, tuple[tuple[float, float], int]] = {}
         self.primed = False  # events fire only for changes seen after the first full sync
 
     async def _sync(self, table: str, key: str, rows: list[dict]) -> list[dict]:
@@ -98,10 +99,10 @@ class Mirror:
             if meta is None:
                 continue
             build = meta_path.parent
-            mtime = meta_path.stat().st_mtime
+            stamp = (meta_path.stat().st_mtime, build.stat().st_mtime)
             cached = self.build_sizes.get(build.name)
-            size = cached[1] if cached and cached[0] == mtime else _dir_size(build)
-            self.build_sizes[build.name] = (mtime, size)
+            size = cached[1] if cached and cached[0] == stamp else _dir_size(build)
+            self.build_sizes[build.name] = (stamp, size)
             created = datetime.fromtimestamp(build.stat().st_ctime, UTC).isoformat()
             rows.append(mapping.build_row(build.name, meta, size, created))
         added = await self._sync("builds", "id", rows)
