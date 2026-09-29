@@ -47,7 +47,12 @@ class VideosPage extends ConsumerWidget {
           value: source,
           data: (videos) => _VideoList(
             videos: videos,
-            header: _SourceBanner(fromYouTube: fromYouTube, connecting: connection.isLoading, error: live.error),
+            header: _SourceBanner(
+              fromYouTube: fromYouTube,
+              connecting: connection.isLoading,
+              error: live.error,
+              connectError: connection.error,
+            ),
           ),
         ),
       ),
@@ -56,11 +61,12 @@ class VideosPage extends ConsumerWidget {
 }
 
 class _SourceBanner extends ConsumerWidget {
-  const _SourceBanner({required this.fromYouTube, required this.connecting, this.error});
+  const _SourceBanner({required this.fromYouTube, required this.connecting, this.error, this.connectError});
 
   final bool fromYouTube;
   final bool connecting;
   final Object? error;
+  final Object? connectError;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -93,6 +99,10 @@ class _SourceBanner extends ConsumerWidget {
                   : 'Live YouTube data is available in the Android app.',
               style: theme.textTheme.bodySmall,
             ),
+            if (connectError != null) ...[
+              const SizedBox(height: 8),
+              Text(describeConnectError(connectError!), style: TextStyle(color: theme.colorScheme.error)),
+            ],
             if (YouTubeConnection.supported) ...[
               const SizedBox(height: 8),
               FilledButton.icon(

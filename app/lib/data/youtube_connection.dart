@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../config.dart';
 import 'models.dart';
@@ -12,6 +13,10 @@ import 'youtube.dart';
 /// Which Google account, if any, is linked for live YouTube data; null when not connected.
 class YouTubeConnection extends AsyncNotifier<GoogleSignInAccount?> {
   static const _scopes = [YouTubeApi.scope];
+
+  /// Set after a successful connect; without it the silent check would open Google's account picker at startup.
+  static const _connectedKey = 'youtube_connected';
+  static const _silentTimeout = Duration(seconds: 10);
 
   /// Native Google sign-in only; the web preview keeps showing the laptop's mirror.
   static bool get supported => !kIsWeb && AppConfig.googleServerClientId.isNotEmpty;
@@ -29,8 +34,14 @@ class YouTubeConnection extends AsyncNotifier<GoogleSignInAccount?> {
       });
     }, onError: (Object _) {});
     ref.onDispose(sub.cancel);
-    // Restores a previous connection without any UI; returns null the first time.
-    return await _google.attemptLightweightAuthentication();
+    final prefs = await SharedPreferences.getInstance();
+    if (prefs.getBool(_connectedKey) != true) return null;
+    // Restores the previous connection without UI; a stuck or failed attempt just leaves it disconnected.
+    try {
+      return await _google.attemptLightweightAuthentication()?.timeout(_silentTimeout);
+    } on Object {
+      return null;
+    }
   }
 
   /// Must run from a button press: Google shows the account picker and the YouTube consent screen.
@@ -39,11 +50,13 @@ class YouTubeConnection extends AsyncNotifier<GoogleSignInAccount?> {
     state = await AsyncValue.guard(() async {
       final user = await _google.authenticate(scopeHint: _scopes);
       await user.authorizationClient.authorizeScopes(_scopes);
+      await (await SharedPreferences.getInstance()).setBool(_connectedKey, true);
       return user;
     });
   }
 
   Future<void> disconnect() async {
+    await (await SharedPreferences.getInstance()).remove(_connectedKey);
     await _google.disconnect();
     state = const AsyncData(null);
   }
@@ -91,3 +104,12 @@ final youTubeFetchedAtProvider = Provider<DateTime?>((ref) {
   final videos = ref.watch(youTubeVideosProvider);
   return videos.hasValue && videos.value != null ? DateTime.now() : null;
 });
+
+/// Readable text for a failed connect; Google's configuration errors otherwise surface as a bare "canceled".
+String describeConnectError(Object error) => switch (error) {
+  GoogleSignInException(code: GoogleSignInExceptionCode.canceled) =>
+    'Sign-in was cancelled. If you did not cancel it, check the Android OAuth client (package name and SHA-1).',
+  GoogleSignInException(:final code, :final description) =>
+    'Google sign-in failed (${code.name}): ${description ?? ''}',
+  _ => '$error',
+};
