@@ -52,3 +52,13 @@ def test_topic_rows_carry_format_and_default_old_topics_to_story():
     )
     assert (rows[0]["format"], rows[0]["rank_count"]) == ("story", None)
     assert (rows[1]["format"], rows[1]["rank_count"], rows[1]["ranking_criterion"]) == ("ranking", 5, "g/cm³")
+
+
+def test_video_rows_carry_the_held_flag_and_confidence():
+    rows = mapping.video_rows(
+        [
+            {"video_id": "a", "title": "A"},
+            {"video_id": "b", "title": "B", "held": True, "confidence": 60, "privacy": "private"},
+        ]
+    )
+    assert [(r["held"], r["confidence"]) for r in rows] == [(False, None), (True, 60)]

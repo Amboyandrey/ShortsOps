@@ -57,6 +57,8 @@ def video_rows(history: list[dict]) -> list[dict]:
                 "comments": h.get("comments"),
                 "stats_updated_at": h.get("stats_updated"),
                 "created_at": h.get("created"),
+                "held": bool(h.get("held")),
+                "confidence": h.get("confidence"),
             }
         )
     return rows

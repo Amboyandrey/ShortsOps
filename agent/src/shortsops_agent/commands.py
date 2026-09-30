@@ -11,6 +11,7 @@ from pydantic import BaseModel, ConfigDict, Field, StringConstraints, Validation
 
 TopicId = Annotated[str, StringConstraints(pattern=r"^[A-Za-z0-9_-]{1,40}$")]
 BuildId = Annotated[str, StringConstraints(pattern=r"^[A-Za-z0-9_-]{1,80}$")]
+VideoId = Annotated[str, StringConstraints(pattern=r"^[A-Za-z0-9_-]{11}$")]
 
 
 class _Payload(BaseModel):
@@ -45,6 +46,11 @@ class BuildRef(_Payload):
     build: BuildId
 
 
+class ApproveVideo(_Payload):
+    video_id: VideoId
+    now: bool = False
+
+
 class Cleanup(_Payload):
     days: int = Field(default=7, ge=1, le=365)
 
@@ -72,6 +78,7 @@ SPECS: dict[str, Spec] = {
     "pause": Spec(Empty, 30),
     "resume": Spec(Empty, 30),
     "cleanup": Spec(Cleanup, 10 * 60, uses_pipeline_lock=True),
+    "approve_video": Spec(ApproveVideo, 120, uses_pipeline_lock=True),
 }
 # Declared in the database but handled in a later phase; the agent fails them explicitly.
 NOT_YET = {"reschedule", "update_config"}
@@ -121,6 +128,8 @@ def to_argv(kind: str, payload: dict, data_dir: Path) -> tuple[Spec, list[str]]:
             return spec, ["stats"]
         case "pause" | "resume":
             return spec, [kind]
+        case "approve_video":
+            return spec, ["approve", p.video_id, *(["--now"] if p.now else [])]
         case "cleanup":
             return spec, ["cleanup", "--days", str(p.days)]
     raise Rejected(f"unhandled command {kind}")
