@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/models.dart';
 import '../data/providers.dart';
 import 'common.dart';
+import 'held_review.dart';
 
 class DashboardPage extends ConsumerWidget {
   const DashboardPage({super.key});
@@ -27,6 +28,7 @@ class DashboardPage extends ConsumerWidget {
         data: (status) => ListView(
           padding: const EdgeInsets.all(16),
           children: [
+            const HeldReminderCard(),
             _AgentCard(status: status, now: now),
             const SizedBox(height: 12),
             _UpcomingCard(now: now),

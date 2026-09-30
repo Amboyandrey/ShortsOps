@@ -8,6 +8,7 @@ import '../data/providers.dart';
 import '../data/youtube.dart';
 import '../data/youtube_connection.dart';
 import 'common.dart';
+import 'held_review.dart';
 
 class VideosPage extends ConsumerWidget {
   const VideosPage({super.key});
@@ -47,6 +48,7 @@ class VideosPage extends ConsumerWidget {
           value: source,
           data: (videos) => _VideoList(
             videos: videos,
+            held: ref.watch(heldVideosProvider),
             header: _SourceBanner(
               fromYouTube: fromYouTube,
               connecting: connection.isLoading,
@@ -121,14 +123,19 @@ class _SourceBanner extends ConsumerWidget {
 }
 
 class _VideoList extends ConsumerWidget {
-  const _VideoList({required this.videos, required this.header});
+  const _VideoList({required this.videos, required this.held, required this.header});
 
   final List<Video> videos;
+
+  /// Held videos come from the laptop's mirror; YouTube only knows they are private.
+  final List<Video> held;
   final Widget header;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final now = ref.watch(clockProvider).value ?? DateTime.now();
+    final heldIds = {for (final v in held) v.videoId};
+    final videos = this.videos.where((v) => !heldIds.contains(v.videoId)).toList();
     final upcoming = videos.where((v) => !v.isLive(now)).toList()..sort((a, b) => a.publishAt!.compareTo(b.publishAt!));
     final live = videos.where((v) => v.isLive(now)).toList()
       ..sort((a, b) => (b.publishAt ?? now).compareTo(a.publishAt ?? now));
@@ -138,6 +145,10 @@ class _VideoList extends ConsumerWidget {
       physics: const AlwaysScrollableScrollPhysics(),
       children: [
         header,
+        if (held.isNotEmpty) ...[
+          _Section('Held for review (${held.length})'),
+          for (final v in held) HeldVideoTile(video: v),
+        ],
         ListTile(title: Text('${compact(total)} views across ${live.length} live Shorts')),
         if (upcoming.isNotEmpty) const _Section('Scheduled'),
         for (final v in upcoming) _VideoTile(video: v, trailing: when(v.publishAt!)),
