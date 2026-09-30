@@ -14,6 +14,9 @@ class Topic {
     this.whyItWorks,
     this.factCheckNotes,
     this.videoId,
+    this.format = 'story',
+    this.rankCount,
+    this.rankingCriterion,
   });
 
   factory Topic.fromRow(Map<String, dynamic> r) => Topic(
@@ -26,6 +29,9 @@ class Topic {
     whyItWorks: r['why_it_works'] as String?,
     factCheckNotes: r['fact_check_notes'] as String?,
     videoId: r['video_id'] as String?,
+    format: r['format'] as String? ?? 'story',
+    rankCount: r['rank_count'] as int?,
+    rankingCriterion: r['ranking_criterion'] as String?,
   );
 
   final String id;
@@ -37,6 +43,16 @@ class Topic {
   final String? whyItWorks;
   final String? factCheckNotes;
   final String? videoId;
+
+  /// 'story' (one fact told as a mini story) or 'ranking' (a countdown of measured entries).
+  final String format;
+  final int? rankCount;
+  final String? rankingCriterion;
+
+  bool get isRanking => format == 'ranking';
+
+  /// Short label for the queue, e.g. 'Top 5'; the writer picks the size when none was given.
+  String get formatLabel => isRanking ? (rankCount != null ? 'Top $rankCount' : 'Ranking') : 'Story';
 
   bool get isStuck => status == 'building' || status == 'failed';
 }

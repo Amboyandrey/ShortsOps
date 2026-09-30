@@ -30,6 +30,9 @@ def topic_rows(topics: list[dict]) -> list[dict]:
             "video_id": t.get("video_id"),
             "out_dir": t.get("out_dir"),
             "created_at": t.get("created"),
+            "format": t.get("format") or "story",
+            "rank_count": t.get("rank_count") or None,
+            "ranking_criterion": t.get("ranking_criterion") or None,
         }
         for i, t in enumerate(topics)
     ]

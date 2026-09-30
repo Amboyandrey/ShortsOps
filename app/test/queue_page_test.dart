@@ -6,8 +6,16 @@ import 'package:shortsops/data/providers.dart';
 import 'package:shortsops/data/repository.dart';
 import 'package:shortsops/ui/queue_page.dart';
 
-Topic topic(String id, String status, int position) =>
-    Topic.fromRow({'id': id, 'topic': 'Topic $id', 'status': status, 'position': position, 'hook': 'Hook $id'});
+Topic topic(String id, String status, int position, {String format = 'story', int? rankCount}) => Topic.fromRow({
+  'id': id,
+  'topic': 'Topic $id',
+  'status': status,
+  'position': position,
+  'hook': 'Hook $id',
+  'format': format,
+  'rank_count': rankCount,
+  'ranking_criterion': format == 'ranking' ? 'density in g/cm³' : null,
+});
 
 void main() {
   testWidgets('queue groups topics and offers the right actions', (tester) async {
@@ -85,5 +93,24 @@ void main() {
     for (final risky in ['make', 'publish_now', 'approve_upload', 'reset_stuck', 'research']) {
       expect(ShortsOpsRepository.ttlFor(risky), const Duration(hours: 1), reason: risky);
     }
+  });
+
+  testWidgets('ranking topics carry a Top N chip and show their criterion', (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          topicsProvider.overrideWith(
+            (ref) =>
+                Stream.value([topic('r', 'pending', 0, format: 'ranking', rankCount: 5), topic('s', 'pending', 1)]),
+          ),
+        ],
+        child: const MaterialApp(home: QueuePage()),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Top 5'), findsOneWidget, reason: 'stories get no chip');
+    await tester.tap(find.text('Topic r'));
+    await tester.pumpAndSettle();
+    expect(find.text('density in g/cm³'), findsOneWidget);
   });
 }

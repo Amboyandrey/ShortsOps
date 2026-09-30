@@ -76,7 +76,11 @@ class QueuePage extends ConsumerWidget {
           maxLength: 200,
           minLines: 2,
           maxLines: 4,
-          decoration: const InputDecoration(hintText: 'e.g. Why octopuses have three hearts'),
+          decoration: const InputDecoration(
+            hintText: 'e.g. Why octopuses have three hearts',
+            helperText: 'Start with "Top 3", "Top 5" or "Top 10" for a ranking video',
+            helperMaxLines: 2,
+          ),
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(c), child: const Text('Cancel')),
@@ -145,10 +149,22 @@ class _TopicTile extends ConsumerWidget {
           ? Icon(t.isStuck ? Icons.warning_amber : Icons.block, size: 20)
           : CircleAvatar(radius: 14, child: Text('$rank', style: const TextStyle(fontSize: 12))),
       title: Text(t.topic),
-      subtitle: Text(t.isStuck ? 'Status: ${t.status}' : (t.subniche ?? ''), maxLines: 1),
+      subtitle: Row(
+        children: [
+          if (t.isRanking) ...[_FormatChip(t.formatLabel), const SizedBox(width: 8)],
+          Flexible(
+            child: Text(
+              t.isStuck ? 'Status: ${t.status}' : (t.subniche ?? ''),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
       childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
       expandedCrossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        if (t.rankingCriterion != null) _Detail('Ranked by', t.rankingCriterion!),
         if (t.hook != null) _Detail('Hook', t.hook!),
         if (t.whyItWorks != null) _Detail('Why it should work', t.whyItWorks!),
         if (t.factCheckNotes != null) _Detail('Fact-check notes', t.factCheckNotes!),
@@ -206,6 +222,25 @@ class _TopicTile extends ConsumerWidget {
       ],
       _ => const [],
     };
+  }
+}
+
+class _FormatChip extends StatelessWidget {
+  const _FormatChip(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+      decoration: BoxDecoration(color: scheme.tertiaryContainer, borderRadius: BorderRadius.circular(4)),
+      child: Text(
+        text,
+        style: TextStyle(fontSize: 11, color: scheme.onTertiaryContainer, fontWeight: FontWeight.w600),
+      ),
+    );
   }
 }
 

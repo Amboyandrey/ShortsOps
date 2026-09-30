@@ -41,3 +41,14 @@ def test_quota_counts_uploads_since_pacific_midnight():
     used = mapping.quota_units_used(history, now)
     assert used == 2 * mapping.UPLOAD_COST
     assert mapping.uploads_left(used) == 4
+
+
+def test_topic_rows_carry_format_and_default_old_topics_to_story():
+    rows = mapping.topic_rows(
+        [
+            {"id": "old", "topic": "Why cats purr"},
+            {"id": "r", "topic": "Top 5 densest", "format": "ranking", "rank_count": 5, "ranking_criterion": "g/cm³"},
+        ]
+    )
+    assert (rows[0]["format"], rows[0]["rank_count"]) == ("story", None)
+    assert (rows[1]["format"], rows[1]["rank_count"], rows[1]["ranking_criterion"]) == ("ranking", 5, "g/cm³")
