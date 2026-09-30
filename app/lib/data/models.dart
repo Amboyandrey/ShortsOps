@@ -66,6 +66,9 @@ class Video {
     this.likes,
     this.comments,
     this.privacy,
+    this.held = false,
+    this.confidence,
+    this.buildId,
   });
 
   factory Video.fromRow(Map<String, dynamic> r) => Video(
@@ -76,6 +79,9 @@ class Video {
     likes: r['likes'] as int?,
     comments: r['comments'] as int?,
     privacy: r['privacy'] as String?,
+    held: r['held'] as bool? ?? false,
+    confidence: r['confidence'] as int?,
+    buildId: r['build_id'] as String?,
   );
 
   final String videoId;
@@ -85,6 +91,11 @@ class Video {
   final int? likes;
   final int? comments;
   final String? privacy;
+
+  /// Uploaded privately because its fact-check confidence was too low; waits for the owner to approve it.
+  final bool held;
+  final int? confidence;
+  final String? buildId;
 
   bool isLive(DateTime now) => publishAt == null || !publishAt!.isAfter(now);
   Uri get url => Uri.parse('https://youtube.com/shorts/$videoId');

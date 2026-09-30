@@ -22,3 +22,12 @@ final clockProvider = StreamProvider<DateTime>((ref) async* {
   yield DateTime.now();
   yield* Stream.periodic(const Duration(seconds: 30), (_) => DateTime.now());
 });
+
+/// Videos uploaded privately for review, newest first; the laptop's mirror is the only source that knows about holds.
+final heldVideosProvider = Provider<List<Video>>(
+  (ref) => (ref.watch(videosProvider).value ?? const <Video>[]).where((v) => v.held).toList(),
+);
+
+final factCheckProvider = FutureProvider.family<String?, String>(
+  (ref, buildId) => ref.watch(repositoryProvider).factCheck(buildId),
+);

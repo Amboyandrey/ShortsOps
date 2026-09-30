@@ -62,3 +62,13 @@ def test_step_markers():
 def test_rejection_names_the_bad_field(data):
     with pytest.raises(Rejected, match=r"^invalid payload: text: String should have at least 5 characters$"):
         to_argv("add_topic", {"text": "no"}, data)
+
+
+def test_approve_video_maps_to_approve_and_validates_the_id(data):
+    _, argv = to_argv("approve_video", {"video_id": "Ubv11_ENHBs"}, data)
+    assert argv == ["approve", "Ubv11_ENHBs"]
+    _, argv = to_argv("approve_video", {"video_id": "Ubv11_ENHBs", "now": True}, data)
+    assert argv == ["approve", "Ubv11_ENHBs", "--now"]
+    for bad in ["short", "Ubv11_ENHBs; rm", "../../etc/pw"]:
+        with pytest.raises(Rejected):
+            to_argv("approve_video", {"video_id": bad}, data)

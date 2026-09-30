@@ -46,6 +46,12 @@ class ShortsOpsRepository {
       .limit(50)
       .map((rows) => rows.map(AppEvent.fromRow).toList());
 
+  /// The fact-check paragraph written for a build, shown when reviewing a held video.
+  Future<String?> factCheck(String buildId) async {
+    final row = await _db.from('builds').select('fact_check').eq('id', buildId).maybeSingle();
+    return row?['fact_check'] as String?;
+  }
+
   /// Queue edits are harmless to apply late, so they wait out a laptop that is off for days (the database caps
   /// them at 7); anything that builds or publishes expires after an hour so it never fires by surprise.
   static const queueEdits = {'add_topic', 'skip_topic', 'restore_topic', 'reorder_topics'};
